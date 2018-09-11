@@ -1,0 +1,17 @@
+* {
+    padding: 0;
+    margin: auto auto;
+    background:#993f70;
+    color: #eee;
+    text-align: center;
+}
+
+body {
+    margin-top: 8%;
+}
+
+canvas {
+    background: #eee;
+    display: block;
+    margin: auto auto;
+}
