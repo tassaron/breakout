@@ -130,6 +130,47 @@ function spawnPowerup(newx, newy) {
 /*
  * CONTROL HANDLER CRAP
  */
+ function touchStartHandler(e) {
+    var touch = e.changedTouches[0];
+    touchStartX = touch.pageX;
+    touchStartY = touch.pageY;
+    touchStartTime = new Date().getTime()
+    e.preventDefault()
+ }
+
+ function touchMoveHandler(e) {
+    e.preventDefault();
+ }
+
+ function touchEndHandler(e) {
+    var touch = e.changedTouches[0];
+    var distance = touch.pageX - touchStartX;
+    var elapsedTime = new Date().getTime() - touchStartTime
+    var swipeRight = (
+        elapsedTime <= 200 &&
+        distance >= 100 &&
+        Math.abs(touch.pageY - touchStartY) <= 100
+    )
+    var swipeLeft = (
+        elapsedTime <= 200 &&
+        distance <= -100 &&
+        Math.abs(touch.pageY - touchStartY) <= 100
+    )
+    if (swipeLeft) {
+        paddleDir = 0;
+        leftPressed = true;
+        rightPressed = false;
+    } else if (swipeRight) {
+        paddleDir = 1;
+        leftPressed = false;
+        rightPressed = true;
+    } else {
+        leftPressed = false;
+        rightPressed = false;
+        tapHandler();
+    }
+ }
+
 function mouseMoveHandler(e) {
     // get relative (to canvas) x coord of mouse
     var mouseX = e.clientX - canvas.offsetLeft;
@@ -141,6 +182,12 @@ function mouseMoveHandler(e) {
         } else {
             paddleDir = 0;
         }
+    }
+}
+
+function tapHandler() {
+    if (gameOver == true) {
+        startGame();
     }
 }
 
@@ -484,8 +531,11 @@ function movePaddle() {
 /*
  * START THE CRAP
  */
-document.addEventListener("mousemove", mouseMoveHandler, false);
-document.addEventListener("mousedown", mouseDownHandler, false);
+canvas.addEventListener("touchstart", touchStartHandler, false);
+canvas.addEventListener("touchmove", touchMoveHandler, false);
+canvas.addEventListener("touchend", touchEndHandler, false);
+canvas.addEventListener("mousemove", mouseMoveHandler, false);
+canvas.addEventListener("mousedown", mouseDownHandler, false);
 document.addEventListener("keydown", keyDownHandler, false);
 document.addEventListener("keyup", keyUpHandler, false);
 startGame();
