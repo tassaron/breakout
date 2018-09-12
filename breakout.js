@@ -419,13 +419,13 @@ function moveBall() {
                 dy = -dy;
                 if (dx < 0) {
                     var dir = 0;
-                    if (dx > -speed) {
-                        dx = -speed - Math.random() * (speed - 4);
+                    if (dx <= -speed) {
+                        dx = -speed - Math.random() * ((speed - 4)*1);
                     }
                 } else {
                     var dir = 1;
-                    if (dx < speed) {
-                        dx = speed + Math.random() * (speed - 4);
+                    if (dx >= speed) {
+                        dx = speed + Math.random() * ((speed - 4)*1);
                     }
                 }
                 if (x - paddleX < paddleWidth / 2) {
@@ -458,10 +458,10 @@ function moveBall() {
         } else {
             // crap hit bottom of the screen
             dying = 30;
-            lives--;
             if (lives > 0) {
                 diedRecently = 90;
             }
+            lives--;
         }
     }
 }
