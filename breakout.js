@@ -133,6 +133,8 @@ function spawnPowerup(newx, newy) {
  function touchStartHandler(e) {
     if (gameOver == true) {
         startGame();
+    } else {
+        touchMoveHandler(e);
     }
     e.preventDefault();
  }
