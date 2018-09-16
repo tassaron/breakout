@@ -25,15 +25,163 @@ globalBall = {
     colour: "#000"
 };
 
-ball = {
-    x: canvas.width / 2,
-    y: canvas.height - 64,
-    dx: globalBall.speed,
-    dy: -globalBall.speed,
+function ball(i, x=canvas.width/2, y=canvas.height-64) {
+    this.i = i;
+    this.x = x;
+    this.y = y;
+    this.dx = globalBall.speed;
+    this.dy = -globalBall.speed;
     // left is 0, right is 1
-    dir: 1
-};
-balls[0] = ball;
+    this.dir = 1;
+
+    this.draw = function(x, y) {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, globalBall.radius, 0, Math.PI*2);
+        ctx.fillStyle = globalBall.colour;
+        ctx.fill();
+        ctx.closePath();
+    };
+
+    this.move = function() {
+        if (timer.ballPause > 0) {
+            timer.ballPause--;
+            return;
+        }
+        this.x += this.dx;
+        this.y += this.dy;
+        if (timer.dying > 0) {
+            // crap is currently falling off the bottom of the screen
+            timer.dying--;
+            if (timer.dying == 0) {
+                if (lives < 0) {
+                    gameOver = true;
+                } else {
+                    resetBall();
+                }
+            }
+            return;
+        }
+
+        if (
+            this.x + this.dx > canvas.width - globalBall.radius ||
+            this.x + this.dx < globalBall.radius
+            ) {
+                this.dx = -this.dx
+                if (this.dx < 0) {
+                    this.dx -= Math.random() * (globalBall.speed - 4);
+                } else {
+                    this.dx += Math.random() * (globalBall.speed - 4);
+                }
+        }
+        if (this.y + this.dy < globalBall.radius) {
+            this.dy = -this.dy;
+        } else if (this.y + this.dy > canvas.height - globalBall.radius) {
+            if (
+                this.x + globalBall.radius > paddle.x &&
+                this.x - globalBall.radius < paddle.x + paddle.width
+                ) {
+                    // crap collides with paddle
+                    this.dy = -this.dy;
+                    if (this.dx < 0) {
+                        var dir = 0;
+                        if (this.dx <= -globalBall.speed) {
+                            this.dx = -globalBall.speed - Math.random() * ((globalBall.speed - 4)*1);
+                        }
+                    } else {
+                        var dir = 1;
+                        if (this.dx >= globalBall.speed) {
+                            this.dx = globalBall.speed + Math.random() * ((globalBall.speed - 4)*1);
+                        }
+                    }
+                    if (this.x - paddle.x < paddle.width / 2) {
+                        // crap hit left side of paddle
+                        var movement = Math.floor(-(this.x - (paddle.x + paddle.width/2)) / 12);
+                        if (dir == 0) {
+                            // crap moving left
+                            this.dx -= movement;
+                            if (paddle.dir == 1) {
+                                this.dx += 3;
+                            }
+                        } else {
+                            // crap moving right
+                            this.dx -= movement;
+                        }
+                    } else {
+                        // crap hit right side of paddle
+                        var movement = Math.floor(-((paddle.x + paddle.width/2) - this.x) / 12);
+                        if (dir == 0) {
+                            // crap moving left
+                            this.dx += movement;
+                        } else {
+                            // crap moving right
+                            this.dx += movement;
+                            if (paddle.dir == 0) {
+                                this.dx -= 3;
+                            }
+                        }
+                    }
+            } else {
+                // crap hit bottom of the screen
+                if (balls.length > 1 && timer.dying == 0) {
+                    balls.splice(this.i, 1);
+                    for (var i = 0; i < balls.length; i++) {
+                        balls[i].i = i;
+                    }
+                } else if (balls.length == 1) {
+                    timer.dying = 30;
+                    if (lives > 0) {
+                        timer.diedRecently = 90;
+                    }
+                    lives--;
+                }
+            }
+        }
+    }
+
+    this.collideWithBricks = function() {
+        for (var col = 0; col < level.columnCount; col++) {
+            for (var row = 0; row < level.rowCount; row++) {
+                var b = bricks[col][row];
+                if (
+                    b.broken == 0 &&
+                    this.x > b.x &&
+                    this.x < b.x + b.width &&
+                    this.y > b.y &&
+                    this.y < b.y + b.height
+                    ) {
+                        if (
+                            this.dx >= -globalBall.speed &&
+                            this.dx <= globalBall.speed &&
+                            Math.random() * 10 < 1
+                            ) {
+                                if (this.dx < 0) {
+                                    this.dx = this.dx + 3;
+                                } else {
+                                    this.dx = this.dx - 3;
+                                }
+                        }
+                        this.dy = -this.dy;
+                        if (
+                            this.dx >= -globalBall.speed &&
+                            this.dx <= globalBall.speed) {
+                                this.dx = -this.dx + randomChoice(
+                                    [0, 0, 0, 0, 0, 0, 1, 1, -1, -1, 2, -2]
+                                );
+                        } else {
+                            this.dx = -this.dx;
+                        }
+                        b.broken = 1;
+                        score++;
+                        spawnPowerup(b.x, b.y, this.i);
+                        if (score % (level.rowCount * level.columnCount) == 0) {
+                            createBricks();
+                        }
+                }
+            }
+        }
+    }
+}
+balls[0] = new ball(0);
 
 paddle = {
     colour: purple,
@@ -74,7 +222,8 @@ var powerup = {
         "#008000", // grow paddle
         "#BA0707", // shrink paddle
         "#FFA500", // faster ball
-        "#800080"  // slower ball
+        "#800080",  // slower ball
+        "#3E3E3E" // multiball
     ],
     width: defaultBrick.width / 3,
     height: defaultBrick.height,
@@ -110,6 +259,7 @@ function startGame() {
 }
 
 function resetBall() {
+    // change ball colour
     var prevBallColour = globalBall.colour;
     while (globalBall.colour == prevBallColour) {
         globalBall.colour = randomChoice([
@@ -119,18 +269,23 @@ function resetBall() {
             "#f4a32e",
         ])
     }
-    ball.x = canvas.width / 2;
-    ball.y = canvas.height - 96;
+
+    // remove all balls but the first one, and replace it to center of screen
+    while (balls.length > 1) {
+        balls.pop();
+    }
+    balls[0].x = canvas.width / 2;
+    balls[0].y = canvas.height - 96;
     globalBall.speed = 4;
     paddle.width = 96;
-    ball.dy = -globalBall.speed;
+    balls[0].dy = -globalBall.speed;
     var ch = randomChoice([0, 1]);
     if (ch == 0) {
-        ball.dx = -globalBall.speed;
-        ball.dir = 0;
+        balls[0].dx = -globalBall.speed;
+        balls[0].dir = 0;
     } else {
-        ball.dx = globalBall.speed;
-        ball.dir = 1;
+        balls[0].dx = globalBall.speed;
+        balls[0].dir = 1;
     }
     timer.ballPause = 90;
     timer.dying = 0;
@@ -140,15 +295,15 @@ function randomChoice(arr) {
     return arr[Math.floor(arr.length * Math.random())];
 }
 
-function spawnPowerup(newX, newY) {
+function spawnPowerup(newX, newY, ballId) {
     if (
         powerup.falling == 0 &&
-        Math.floor(Math.random() * 10) < 5
+        Math.floor(Math.random() * 10) < 1000
         ) {
             powerup.x = newX;
             powerup.y = newY;
-            powerup.dx = -ball.dx;
-            powerup.falling = randomChoice([1,2,3,4]);
+            powerup.dx = -balls[ballId].dx;
+            powerup.falling = randomChoice([1,2,3,4,5, 5, 5, 5, 5, 5, 5 ,5]);
     }
 }
 
@@ -223,13 +378,6 @@ function keyUpHandler(e) {
 /*
 * DRAWING CRAP
 */
-function drawBall() {
-    ctx.beginPath();
-    ctx.arc(ball.x, ball.y, globalBall.radius, 0, Math.PI*2);
-    ctx.fillStyle = globalBall.colour;
-    ctx.fill();
-    ctx.closePath();
-}
 
 function drawPaddle() {
     ctx.beginPath();
@@ -317,7 +465,9 @@ function drawCountdown() {
 }
 
 function draw() {
-    moveBall();
+    for (var i = 0; i < balls.length; i++) {
+        balls[i].move();
+    }
     movePaddle();
     movePowerup();
 
@@ -325,9 +475,11 @@ function draw() {
     if (gameOver == true) {
         drawGameOver();
     } else {
-        drawBall();
+        for (var i = 0; i < balls.length; i++) {
+            balls[i].draw();
+            balls[i].collideWithBricks();
+        }
         drawBricks();
-        collideBallWithBricks();
         collidePowerupWithPaddle();
         drawPaddle();
         drawPowerup();
@@ -343,48 +495,6 @@ function draw() {
 /*
  * MOVING & COLLIDING CRAP
  */
-function collideBallWithBricks() {
-    for (var col = 0; col < level.columnCount; col++) {
-        for (var row = 0; row < level.rowCount; row++) {
-            var b = bricks[col][row];
-            if (
-                b.broken == 0 &&
-                ball.x > b.x &&
-                ball.x < b.x + b.width &&
-                ball.y > b.y &&
-                ball.y < b.y + b.height
-                ) {
-                    if (
-                        ball.dx >= -globalBall.speed &&
-                        ball.dx <= globalBall.speed &&
-                        Math.random() * 10 < 1
-                        ) {
-                            if (ball.dx < 0) {
-                                ball.dx = ball.dx + 3;
-                            } else {
-                                ball.dx = ball.dx - 3;
-                            }
-                    }
-                    ball.dy = -ball.dy;
-                    if (
-                        ball.dx >= -globalBall.speed &&
-                        ball.dx <= globalBall.speed) {
-                            ball.dx = -ball.dx + randomChoice(
-                                [0, 0, 0, 0, 0, 0, 1, 1, -1, -1, 2, -2]
-                            );
-                    } else {
-                        ball.dx = -ball.dx;
-                    }
-                    b.broken = 1;
-                    score++;
-                    spawnPowerup(b.x, b.y);
-                    if (score % (level.rowCount * level.columnCount) == 0) {
-                        createBricks();
-                    }
-            }
-        }
-    }
-}
 
 function collidePowerupWithPaddle() {
         if (
@@ -410,6 +520,14 @@ function collidePowerupWithPaddle() {
                         globalBall.speed -= 2;
                     }
                     break;
+                case 5: // multi-ball
+                    var newBalls = [];
+                    for (var i = 0; i < balls.length; i++) {
+                        // create new ball for every ball that currently exists
+                        newBalls.push(new ball(balls.length + i, balls[i].x, balls[i].y));
+                    }
+                    balls = balls.concat(newBalls);
+                    break;
                 }
                 powerup.falling = 0;
         }
@@ -427,95 +545,6 @@ function movePowerup() {
     }
     if (powerup.y == canvas.height - powerup.height) {
         powerup.falling = 0;
-    }
-}
-
-function moveBall() {
-    if (timer.ballPause > 0) {
-        timer.ballPause--;
-        return;
-    }
-    ball.x += ball.dx;
-    ball.y += ball.dy;
-    if (timer.dying > 0) {
-        // crap is currently falling off the bottom of the screen
-        timer.dying--;
-        if (timer.dying == 0) {
-            if (lives < 0) {
-                gameOver = true;
-            } else {
-                resetBall();
-            }
-        }
-        return;
-    }
-
-    if (
-        ball.x + ball.dx > canvas.width - globalBall.radius ||
-        ball.x + ball.dx < globalBall.radius
-        ) {
-            ball.dx = -ball.dx
-            if (ball.dx < 0) {
-                ball.dx -= Math.random() * (globalBall.speed - 4);
-            } else {
-                ball.dx += Math.random() * (globalBall.speed - 4);
-            }
-    }
-    if (ball.y + ball.dy < globalBall.radius) {
-        ball.dy = -ball.dy;
-    } else if (ball.y + ball.dy > canvas.height - globalBall.radius) {
-        if (
-            ball.x + globalBall.radius > paddle.x &&
-            ball.x - globalBall.radius < paddle.x + paddle.width
-            ) {
-                // crap collides with paddle
-                ball.dy = -ball.dy;
-                if (ball.dx < 0) {
-                    var dir = 0;
-                    if (ball.dx <= -globalBall.speed) {
-                        ball.dx = -globalBall.speed - Math.random() * ((globalBall.speed - 4)*1);
-                    }
-                } else {
-                    var dir = 1;
-                    if (ball.dx >= globalBall.speed) {
-                        ball.dx = globalBall.speed + Math.random() * ((globalBall.speed - 4)*1);
-                    }
-                }
-                if (ball.x - paddle.x < paddle.width / 2) {
-                    // crap hit left side of paddle
-                    var movement = Math.floor(-(ball.x - (paddle.x + paddle.width/2)) / 12);
-                    if (dir == 0) {
-                        // crap moving left
-                        ball.dx -= movement;
-                        if (paddle.dir == 1) {
-                            ball.dx += 3;
-                        }
-                    } else {
-                        // crap moving right
-                        ball.dx -= movement;
-                    }
-                } else {
-                    // crap hit right side of paddle
-                    var movement = Math.floor(-((paddle.x + paddle.width/2) - ball.x) / 12);
-                    if (dir == 0) {
-                        // crap moving left
-                        ball.dx += movement;
-                    } else {
-                        // crap moving right
-                        ball.dx += movement;
-                        if (paddle.dir == 0) {
-                            ball.dx -= 3;
-                        }
-                    }
-                }
-        } else {
-            // crap hit bottom of the screen
-            timer.dying = 30;
-            if (lives > 0) {
-                timer.diedRecently = 90;
-            }
-            lives--;
-        }
     }
 }
 
