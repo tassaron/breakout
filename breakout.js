@@ -298,12 +298,12 @@ function randomChoice(arr) {
 function spawnPowerup(newX, newY, ballId) {
     if (
         powerup.falling == 0 &&
-        Math.floor(Math.random() * 10) < 1000
+        Math.floor(Math.random() * 10) < 5
         ) {
             powerup.x = newX;
             powerup.y = newY;
             powerup.dx = -balls[ballId].dx;
-            powerup.falling = randomChoice([1,2,3,4,5, 5, 5, 5, 5, 5, 5 ,5]);
+            powerup.falling = randomChoice([1,2,3,4,5]);
     }
 }
 
@@ -522,7 +522,7 @@ function collidePowerupWithPaddle() {
                     break;
                 case 5: // multi-ball
                     var newBalls = [];
-                    for (var i = 0; i < balls.length; i++) {
+                    for (var i = 0; i < balls.length && balls.length < 17; i++) {
                         // create new ball for every ball that currently exists
                         newBalls.push(new ball(balls.length + i, balls[i].x, balls[i].y));
                     }
