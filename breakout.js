@@ -10,66 +10,91 @@ var score = 0;
 var lives = 3;
 var livesColour = "#000";
 var gameOver = false;
-var ballPause = 0;
-var diedRecently = 0;
-var dying = 0;
-
-
-// ball crap
-var ballRadius = 12;
-var ballColour = "#000";
-var prevBallColour = "#000";
-var x = canvas.width / 2;
-var y = canvas.height - 64;
-var speed = 4;
-var dx = speed;
-var dy = -speed;
-var dir = 1;
-
-// paddle crap
-var paddleColour = purple;
-var paddleHeight = 16;
-var paddleWidth = 96;
-var paddleSpeed = 8;
-var paddleX = (canvas.width - paddleWidth) / 2;
-var paddleDir = 0;
-
-// bricks crap
-var brickColour = purple;
-var brickRowCount = 3;
-var brickColumnCount = 7;
-var brickWidth = 76;
-var brickHeight = 24;
-var brickPadding = 8;
-var brickOffsetTop = 64;
-var brickOffsetLeft = 32;
 var bricks = [];
+var balls = [];
 
-// powerup crap
-var fallingPowerup = 0;
-var powerupColour = [
-    "#000",    // nothing
-    "#008000", // grow paddle
-    "#BA0707", // shrink paddle
-    "#FFA500", // faster ball
-    "#800080"  // slower ball
-];
-var powerupWidth = brickWidth / 3;
-var powerupHeight = brickHeight;
-var powerupX = 0;
-var powerupY = 0;
-var powerupDy = speed;
-var powerupDx = 0;
+timer = {
+    ballPause: 0,
+    diedRecently: 0,
+    dying: 0
+};
+
+globalBall = {
+    speed: 4,
+    radius: 12,
+    colour: "#000"
+};
+
+ball = {
+    x: canvas.width / 2,
+    y: canvas.height - 64,
+    dx: globalBall.speed,
+    dy: -globalBall.speed,
+    // left is 0, right is 1
+    dir: 1
+};
+balls[0] = ball;
+
+paddle = {
+    colour: purple,
+    height: 16,
+    width: 96,
+    speed: 8,
+    x: (canvas.width - this.width) / 2,
+    dir: 0
+};
+
+level = {
+    rowCount: 3,
+    columnCount: 7,
+    offsetTop: 64,
+    offsetLeft: 32,
+    brickPadding: 8
+};
+
+defaultBrick = {
+    colour: purple,
+    width: 76,
+    height: 24
+};
+
+function brick(x, y) {
+    this.x = x;
+    this.y = y;
+    this.broken = 0;
+    this.colour = defaultBrick.colour;
+    this.width = defaultBrick.width;
+    this.height = defaultBrick.height;
+}
+
+var powerup = {
+    falling: 0,
+    colour: [
+        "#000",    // nothing
+        "#008000", // grow paddle
+        "#BA0707", // shrink paddle
+        "#FFA500", // faster ball
+        "#800080"  // slower ball
+    ],
+    width: defaultBrick.width / 3,
+    height: defaultBrick.height,
+    x: 0,
+    y: 0,
+    dy: globalBall.speed,
+    dx: 0
+};
 
 
 /*
  * BASIC CRAP
  */
 function createBricks() {
-    for (var col = 0; col < brickColumnCount; col++) {
+    for (var col = 0; col < level.columnCount; col++) {
         bricks[col] = [];
-        for (var row = 0; row < brickRowCount; row++) {
-            bricks[col][row] = { x: 0, y: 0, broken: 0 };
+        for (var row = 0; row < level.rowCount; row++) {
+            var brickX = (col * (defaultBrick.width + level.brickPadding)) + level.offsetLeft;
+            var brickY = (row * (defaultBrick.height + level.brickPadding)) + level.offsetTop;
+            bricks[col][row] = new brick(brickX, brickY);
         }
     }
 }
@@ -79,51 +104,51 @@ function startGame() {
     lives = 3;
     gameOver = false;
     resetBall();
-    paddleX = (canvas.width - paddleWidth) / 2;
-    paddleDir = 0;
+    paddle.x = (canvas.width - paddle.width) / 2;
+    paddle.dir = 0;
     createBricks();
 }
 
 function resetBall() {
-    while (ballColour == prevBallColour) {
-        ballColour = randomChoice([
+    var prevBallColour = globalBall.colour;
+    while (globalBall.colour == prevBallColour) {
+        globalBall.colour = randomChoice([
             "#043836",
             "#fa482e",
             "#0a827c",
             "#f4a32e",
         ])
     }
-    prevBallColour = ballColour;
-    x = canvas.width / 2;
-    y = canvas.height - 96;
-    speed = 4;
-    paddleWidth = 96;
-    dy = -speed;
+    ball.x = canvas.width / 2;
+    ball.y = canvas.height - 96;
+    globalBall.speed = 4;
+    paddle.width = 96;
+    ball.dy = -globalBall.speed;
     var ch = randomChoice([0, 1]);
     if (ch == 0) {
-        dx = -speed;
-        dir = 0;
+        ball.dx = -globalBall.speed;
+        ball.dir = 0;
     } else {
-        dx = speed;
-        dir = 1;
+        ball.dx = globalBall.speed;
+        ball.dir = 1;
     }
-    ballPause = 90;
-    dying = 0;
+    timer.ballPause = 90;
+    timer.dying = 0;
 }
 
 function randomChoice(arr) {
     return arr[Math.floor(arr.length * Math.random())];
 }
 
-function spawnPowerup(newx, newy) {
+function spawnPowerup(newX, newY) {
     if (
-        fallingPowerup == 0 &&
+        powerup.falling == 0 &&
         Math.floor(Math.random() * 10) < 5
         ) {
-            powerupX = newx;
-            powerupY = newy;
-            powerupDx = -dx;
-            fallingPowerup = randomChoice([1,2,3,4]);
+            powerup.x = newX;
+            powerup.y = newY;
+            powerup.dx = -ball.dx;
+            powerup.falling = randomChoice([1,2,3,4]);
     }
 }
 
@@ -144,12 +169,12 @@ function spawnPowerup(newx, newy) {
     touch = e.changedTouches[0];
     var mouseX = touch.pageX - canvas.offsetLeft;
     if (mouseX > 0 && mouseX < canvas.width) {
-        var oldPaddleX = paddleX;
-        paddleX = mouseX - paddleWidth / 2;
-        if (oldPaddleX - paddleX < 0) {
-            paddleDir = 1;
+        var oldPaddleX = paddle.x;
+        paddle.x = mouseX - paddle.width / 2;
+        if (oldPaddleX - paddle.x < 0) {
+            paddle.dir = 1;
         } else {
-            paddleDir = 0;
+            paddle.dir = 0;
         }
     }
     e.preventDefault();
@@ -159,12 +184,12 @@ function mouseMoveHandler(e) {
     // get relative (to canvas) x coord of mouse
     var mouseX = e.clientX - canvas.offsetLeft;
     if (mouseX > 0 && mouseX < canvas.width) {
-        var oldPaddleX = paddleX;
-        paddleX = mouseX - paddleWidth / 2;
-        if (oldPaddleX - paddleX < 0) {
-            paddleDir = 1;
+        var oldPaddleX = paddle.x;
+        paddle.x = mouseX - paddle.width / 2;
+        if (oldPaddleX - paddle.x < 0) {
+            paddle.dir = 1;
         } else {
-            paddleDir = 0;
+            paddle.dir = 0;
         }
     }
 }
@@ -178,10 +203,10 @@ function mouseDownHandler(e) {
 function keyDownHandler(e) {
     if (e.keyCode == 39) {
         rightPressed = true;
-        paddleDir = 1;
+        paddle.dir = 1;
     } else if (e.keyCode == 37) {
         leftPressed = true;
-        paddleDir = 0;
+        paddle.dir = 0;
     }
 }
 
@@ -200,31 +225,32 @@ function keyUpHandler(e) {
 */
 function drawBall() {
     ctx.beginPath();
-    ctx.arc(x, y, ballRadius, 0, Math.PI*2);
-    ctx.fillStyle = ballColour;
+    ctx.arc(ball.x, ball.y, globalBall.radius, 0, Math.PI*2);
+    ctx.fillStyle = globalBall.colour;
     ctx.fill();
     ctx.closePath();
 }
 
 function drawPaddle() {
     ctx.beginPath();
-    ctx.rect(paddleX, canvas.height - paddleHeight, paddleWidth, paddleHeight);
-    ctx.fillStyle = paddleColour;
+    ctx.rect(paddle.x, canvas.height - paddle.height, paddle.width, paddle.height);
+    ctx.fillStyle = paddle.colour;
     ctx.fill();
     ctx.closePath();
 }
 
 function drawBricks() {
-    for (var col = 0; col < brickColumnCount; col++) {
-        for (var row = 0; row < brickRowCount; row++) {
+    for (var col = 0; col < level.columnCount; col++) {
+        for (var row = 0; row < level.rowCount; row++) {
             if (bricks[col][row].broken == 0) {
-                var brickX = (col * (brickWidth + brickPadding)) + brickOffsetLeft;
-                var brickY = (row * (brickHeight + brickPadding)) + brickOffsetTop;
-                bricks[col][row].x = brickX;
-                bricks[col][row].y = brickY;
                 ctx.beginPath();
-                ctx.rect(brickX, brickY, brickWidth, brickHeight);
-                ctx.fillStyle = brickColour;
+                ctx.rect(
+                    bricks[col][row].x,
+                    bricks[col][row].y,
+                    bricks[col][row].width,
+                    bricks[col][row].height
+                );
+                ctx.fillStyle = bricks[col][row].colour;
                 ctx.fill();
                 ctx.closePath();
             }
@@ -233,12 +259,12 @@ function drawBricks() {
 }
 
 function drawPowerup() {
-    if (fallingPowerup == 0) {
+    if (powerup.falling == 0) {
         return;
     }
     ctx.beginPath();
-    ctx.rect(powerupX, powerupY, powerupWidth, powerupHeight);
-    ctx.fillStyle = powerupColour[fallingPowerup];
+    ctx.rect(powerup.x, powerup.y, powerup.width, powerup.height);
+    ctx.fillStyle = powerup.colour[powerup.falling];
     ctx.fill();
     ctx.closePath();
 }
@@ -251,19 +277,19 @@ function drawScore() {
 
 function drawLives() {
     ctx.font = "16pt Verdana";
-    if (diedRecently > 0) {
+    if (timer.diedRecently > 0) {
         if (
-            diedRecently % 15 == 0 &&
+            timer.diedRecently % 15 == 0 &&
             livesColour == "#000"
             ) {
                 livesColour = "#ff0000";
         } else if (
-            diedRecently % 15 == 0 &&
+            timer.diedRecently % 15 == 0 &&
             livesColour == "#ff0000" ||
-            diedRecently == 1) {
+            timer.diedRecently == 1) {
                 livesColour = "#000";
         }
-        diedRecently--;
+        timer.diedRecently--;
     }
     ctx.fillStyle = livesColour;
     if (lives == -1) {
@@ -284,7 +310,7 @@ function drawGameOver() {
 }
 
 function drawCountdown() {
-    num = Math.floor(ballPause / 30) + 1;
+    num = Math.floor(timer.ballPause / 30) + 1;
     ctx.font = "36pt Verdana";
     ctx.fillStyle = purple;
     ctx.fillText(num, canvas.width/2 - 4, canvas.height/2 + 8);
@@ -308,7 +334,7 @@ function draw() {
         drawLives();
     }
     drawScore();
-    if (ballPause > 0) {
+    if (timer.ballPause > 0) {
         drawCountdown();
     }
     requestAnimationFrame(draw);
@@ -318,39 +344,41 @@ function draw() {
  * MOVING & COLLIDING CRAP
  */
 function collideBallWithBricks() {
-    for (var col = 0; col < brickColumnCount; col++) {
-        for (var row = 0; row < brickRowCount; row++) {
+    for (var col = 0; col < level.columnCount; col++) {
+        for (var row = 0; row < level.rowCount; row++) {
             var b = bricks[col][row];
             if (
                 b.broken == 0 &&
-                x > b.x &&
-                x < b.x + brickWidth &&
-                y > b.y &&
-                y < b.y + brickHeight
+                ball.x > b.x &&
+                ball.x < b.x + b.width &&
+                ball.y > b.y &&
+                ball.y < b.y + b.height
                 ) {
                     if (
-                        dx >= -speed &&
-                        dx <= speed &&
+                        ball.dx >= -globalBall.speed &&
+                        ball.dx <= globalBall.speed &&
                         Math.random() * 10 < 1
                         ) {
-                            if (dx < 0) {
-                                dx = dx + 3;
+                            if (ball.dx < 0) {
+                                ball.dx = ball.dx + 3;
                             } else {
-                                dx = dx - 3;
+                                ball.dx = ball.dx - 3;
                             }
                     }
-                    dy = -dy;
-                    if (dx >= -speed && dx <= speed) {
-                        dx = -dx + randomChoice(
-                            [0, 0, 0, 0, 0, 0, 1, 1, -1, -1, 2, -2]
-                        );
+                    ball.dy = -ball.dy;
+                    if (
+                        ball.dx >= -globalBall.speed &&
+                        ball.dx <= globalBall.speed) {
+                            ball.dx = -ball.dx + randomChoice(
+                                [0, 0, 0, 0, 0, 0, 1, 1, -1, -1, 2, -2]
+                            );
                     } else {
-                        dx = -dx;
+                        ball.dx = -ball.dx;
                     }
                     b.broken = 1;
                     score++;
                     spawnPowerup(b.x, b.y);
-                    if (score % (brickRowCount * brickColumnCount) == 0) {
+                    if (score % (level.rowCount * level.columnCount) == 0) {
                         createBricks();
                     }
             }
@@ -360,59 +388,59 @@ function collideBallWithBricks() {
 
 function collidePowerupWithPaddle() {
         if (
-            fallingPowerup > 0 &&
-            powerupX + powerupWidth >= paddleX &&
-            powerupX < paddleX + paddleWidth &&
-            powerupY + powerupHeight > canvas.height - paddleHeight
+            powerup.falling > 0 &&
+            powerup.x + powerup.width >= paddle.x &&
+            powerup.x < paddle.x + paddle.width &&
+            powerup.y + powerup.height > canvas.height - paddle.height
             ) {
-                switch (fallingPowerup) {
+                switch (powerup.falling) {
                 case 1: // grow paddle
-                    paddleWidth += 32;
+                    paddle.width += 32;
                     break;
                 case 2: // shrink paddle
-                    if (paddleWidth > 32) {
-                        paddleWidth -= 32;
+                    if (paddle.width > 32) {
+                        paddle.width -= 32;
                     }
                     break;
                 case 3: // faster ball
-                    speed += 2;
+                    globalBall.speed += 2;
                     break;
                 case 4: // slower ball
-                    if (speed > 2) {
-                        speed -= 2;
+                    if (globalBall.speed > 2) {
+                        globalBall.speed -= 2;
                     }
                     break;
                 }
-                fallingPowerup = 0;
+                powerup.falling = 0;
         }
 }
 
 
 function movePowerup() {
-    powerupX += powerupDx;
-    powerupY += powerupDy;
+    powerup.x += powerup.dx;
+    powerup.y += powerup.dy;
     if (
-        powerupX > canvas.width - powerupWidth ||
-        powerupX < 0
+        powerup.x > canvas.width - powerup.width ||
+        powerup.x < 0
         ) {
-            powerupDx = -powerupDx
+            powerup.dx = -powerup.dx
     }
-    if (powerupY == canvas.height - powerupHeight) {
-        fallingPowerup = 0;
+    if (powerup.y == canvas.height - powerup.height) {
+        powerup.falling = 0;
     }
 }
 
 function moveBall() {
-    if (ballPause > 0) {
-        ballPause--;
+    if (timer.ballPause > 0) {
+        timer.ballPause--;
         return;
     }
-    x += dx;
-    y += dy;
-    if (dying > 0) {
+    ball.x += ball.dx;
+    ball.y += ball.dy;
+    if (timer.dying > 0) {
         // crap is currently falling off the bottom of the screen
-        dying--;
-        if (dying == 0) {
+        timer.dying--;
+        if (timer.dying == 0) {
             if (lives < 0) {
                 gameOver = true;
             } else {
@@ -423,68 +451,68 @@ function moveBall() {
     }
 
     if (
-        x + dx > canvas.width - ballRadius ||
-        x + dx < ballRadius
+        ball.x + ball.dx > canvas.width - globalBall.radius ||
+        ball.x + ball.dx < globalBall.radius
         ) {
-            dx = -dx
-            if (dx < 0) {
-                dx -= Math.random() * (speed - 4);
+            ball.dx = -ball.dx
+            if (ball.dx < 0) {
+                ball.dx -= Math.random() * (globalBall.speed - 4);
             } else {
-                dx += Math.random() * (speed - 4);
+                ball.dx += Math.random() * (globalBall.speed - 4);
             }
     }
-    if (y + dy < ballRadius) {
-        dy = -dy;
-    } else if (y + dy > canvas.height - ballRadius) {
+    if (ball.y + ball.dy < globalBall.radius) {
+        ball.dy = -ball.dy;
+    } else if (ball.y + ball.dy > canvas.height - globalBall.radius) {
         if (
-            x + ballRadius > paddleX &&
-            x - ballRadius < paddleX + paddleWidth
+            ball.x + globalBall.radius > paddle.x &&
+            ball.x - globalBall.radius < paddle.x + paddle.width
             ) {
                 // crap collides with paddle
-                dy = -dy;
-                if (dx < 0) {
+                ball.dy = -ball.dy;
+                if (ball.dx < 0) {
                     var dir = 0;
-                    if (dx <= -speed) {
-                        dx = -speed - Math.random() * ((speed - 4)*1);
+                    if (ball.dx <= -globalBall.speed) {
+                        ball.dx = -globalBall.speed - Math.random() * ((globalBall.speed - 4)*1);
                     }
                 } else {
                     var dir = 1;
-                    if (dx >= speed) {
-                        dx = speed + Math.random() * ((speed - 4)*1);
+                    if (ball.dx >= globalBall.speed) {
+                        ball.dx = globalBall.speed + Math.random() * ((globalBall.speed - 4)*1);
                     }
                 }
-                if (x - paddleX < paddleWidth / 2) {
+                if (ball.x - paddle.x < paddle.width / 2) {
                     // crap hit left side of paddle
-                    var movement = Math.floor(-(x - (paddleX + paddleWidth/2)) / 12);
+                    var movement = Math.floor(-(ball.x - (paddle.x + paddle.width/2)) / 12);
                     if (dir == 0) {
                         // crap moving left
-                        dx -= movement;
-                        if (paddleDir == 1) {
-                            dx += 3;
+                        ball.dx -= movement;
+                        if (paddle.dir == 1) {
+                            ball.dx += 3;
                         }
                     } else {
                         // crap moving right
-                        dx -= movement;
+                        ball.dx -= movement;
                     }
                 } else {
                     // crap hit right side of paddle
-                    var movement = Math.floor(-((paddleX + paddleWidth/2) - x) / 12);
+                    var movement = Math.floor(-((paddle.x + paddle.width/2) - ball.x) / 12);
                     if (dir == 0) {
                         // crap moving left
-                        dx += movement;
+                        ball.dx += movement;
                     } else {
                         // crap moving right
-                        dx += movement;
-                        if (paddleDir == 0) {
-                            dx -= 3;
+                        ball.dx += movement;
+                        if (paddle.dir == 0) {
+                            ball.dx -= 3;
                         }
                     }
                 }
         } else {
             // crap hit bottom of the screen
-            dying = 30;
+            timer.dying = 30;
             if (lives > 0) {
-                diedRecently = 90;
+                timer.diedRecently = 90;
             }
             lives--;
         }
@@ -494,15 +522,15 @@ function moveBall() {
 function movePaddle() {
     if (
         rightPressed &&
-        paddleX < canvas.width - (paddleWidth/2)
+        paddle.x < canvas.width - (paddle.width/2)
         ) {
-            paddleX += paddleSpeed;
+            paddle.x += paddle.speed;
     }
     else if (
         leftPressed &&
-        paddleX > 0 - (paddleWidth/2)
+        paddle.x > 0 - (paddle.width/2)
         ) {
-            paddleX -= paddleSpeed;
+            paddle.x -= paddle.speed;
     }
 }
 
