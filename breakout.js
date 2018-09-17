@@ -10,6 +10,7 @@ var score = 0;
 var lives = 3;
 var livesColour = "#000";
 var gameOver = false;
+var gamePaused = false;
 var bricks = [];
 var balls = [];
 
@@ -350,7 +351,7 @@ function mouseMoveHandler(e) {
 }
 
 function mouseDownHandler(e) {
-    if (e.button == 0 && gameOver == true) {
+    if (e.button == 0 && gameOver == true && gamePaused == false) {
         startGame();
     }
 }
@@ -370,8 +371,10 @@ function keyUpHandler(e) {
         rightPressed = false;
     } else if (e.keyCode == 37) {
         leftPressed = false;
-    } else if (e.keyCode == 32 && gameOver == true) {
+    } else if (e.keyCode == 32 && gameOver == true && gamePaused == false) {
         startGame();
+    } else if (e.keyCode == 80) {
+        pauseGame();
     }
 }
 
@@ -457,6 +460,12 @@ function drawGameOver() {
     drawMuffin(ctx);
 }
 
+function drawPauseScreen() {
+    ctx.font = "36pt Verdana";
+    ctx.fillStyle = "#333";
+    ctx.fillText("Paused", canvas.width/2 - 90, canvas.height/2);
+}
+
 function drawCountdown() {
     num = Math.floor(timer.ballPause / 30) + 1;
     ctx.font = "36pt Verdana";
@@ -465,13 +474,18 @@ function drawCountdown() {
 }
 
 function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (gamePaused == true) {
+        drawPauseScreen();
+        requestAnimationFrame(draw);
+        return;
+    }
     for (var i = 0; i < balls.length; i++) {
         balls[i].move();
     }
     movePaddle();
     movePowerup();
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (gameOver == true) {
         drawGameOver();
     } else {
@@ -560,6 +574,14 @@ function movePaddle() {
         paddle.x > 0 - (paddle.width/2)
         ) {
             paddle.x -= paddle.speed;
+    }
+}
+
+function pauseGame() {
+    if (gamePaused == true) {
+        gamePaused = false;
+    } else {
+        gamePaused = true;
     }
 }
 
