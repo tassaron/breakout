@@ -14,12 +14,15 @@ var gamePaused = false;
 var bricks = [];
 var balls = [];
 
+// Timer for pausing the ball during countdowns
+// and giving invincibility frames after a death
 timer = {
     ballPause: 0,
     diedRecently: 0,
     dying: 0
 };
 
+// Universal truths about a ball
 globalBall = {
     speed: 4,
     radius: 12,
@@ -27,7 +30,7 @@ globalBall = {
 };
 
 function ball(i, x=canvas.width/2, y=canvas.height-64) {
-    this.i = i;
+    this.i = i; // index in ball array
     this.x = x;
     this.y = y;
     this.dx = globalBall.speed;
@@ -51,7 +54,7 @@ function ball(i, x=canvas.width/2, y=canvas.height-64) {
         this.x += this.dx;
         this.y += this.dy;
         if (timer.dying > 0) {
-            // crap is currently falling off the bottom of the screen
+            // A ball already fell off the bottom recently
             timer.dying--;
             if (timer.dying == 0) {
                 if (lives < 0) {
@@ -63,10 +66,11 @@ function ball(i, x=canvas.width/2, y=canvas.height-64) {
             return;
         }
 
-        if (
+        if ( // ball collides with horizontal walls
             this.x + this.dx > canvas.width - globalBall.radius ||
             this.x + this.dx < globalBall.radius
             ) {
+                // reverse ball direction and add some random angle
                 this.dx = -this.dx
                 if (this.dx < 0) {
                     this.dx -= Math.random() * (globalBall.speed - 4);
@@ -75,13 +79,15 @@ function ball(i, x=canvas.width/2, y=canvas.height-64) {
                 }
         }
         if (this.y + this.dy < globalBall.radius) {
+            // collision with ceiling, reverse vertical direction
             this.dy = -this.dy;
         } else if (this.y + this.dy > canvas.height - globalBall.radius) {
+            // Mayday! this ball is at the bottom of the screen!
             if (
                 this.x + globalBall.radius > paddle.x &&
                 this.x - globalBall.radius < paddle.x + paddle.width
                 ) {
-                    // crap collides with paddle
+                    // collision with paddle
                     this.dy = -this.dy;
                     if (this.dx < 0) {
                         var dir = 0;
@@ -95,26 +101,24 @@ function ball(i, x=canvas.width/2, y=canvas.height-64) {
                         }
                     }
                     if (this.x - paddle.x < paddle.width / 2) {
-                        // crap hit left side of paddle
+                        // Ball hit left side of paddle
                         var movement = Math.floor(-(this.x - (paddle.x + paddle.width/2)) / 12);
                         if (dir == 0) {
-                            // crap moving left
+                            // Ball moving left
                             this.dx -= movement;
                             if (paddle.dir == 1) {
                                 this.dx += 3;
                             }
                         } else {
-                            // crap moving right
+                            // Ball moving right
                             this.dx -= movement;
                         }
                     } else {
-                        // crap hit right side of paddle
+                        // Ball hit right side of paddle
                         var movement = Math.floor(-((paddle.x + paddle.width/2) - this.x) / 12);
                         if (dir == 0) {
-                            // crap moving left
                             this.dx += movement;
                         } else {
-                            // crap moving right
                             this.dx += movement;
                             if (paddle.dir == 0) {
                                 this.dx -= 3;
@@ -122,8 +126,9 @@ function ball(i, x=canvas.width/2, y=canvas.height-64) {
                         }
                     }
             } else {
-                // crap hit bottom of the screen
+                // This ball hit bottom of the screen
                 if (balls.length > 1 && timer.dying == 0) {
+                    // Not final ball but not invincible so remove this ball
                     balls.splice(this.i, 1);
                     for (var i = 0; i < balls.length; i++) {
                         balls[i].i = i;
@@ -234,10 +239,6 @@ var powerup = {
     dx: 0
 };
 
-
-/*
- * BASIC CRAP
- */
 function createBricks() {
     for (var col = 0; col < level.columnCount; col++) {
         bricks[col] = [];
@@ -309,7 +310,7 @@ function spawnPowerup(newX, newY, ballId) {
 }
 
 /*
- * CONTROL HANDLER CRAP
+ * CONTROL HANDLERS
  */
  function touchStartHandler(e) {
     if (gameOver == true) {
@@ -379,7 +380,7 @@ function keyUpHandler(e) {
 }
 
 /*
-* DRAWING CRAP
+* DRAWING FUNCTIONS
 */
 
 function drawPaddle() {
@@ -507,7 +508,7 @@ function draw() {
 }
 
 /*
- * MOVING & COLLIDING CRAP
+ * MOVING & COLLIDING
  */
 
 function collidePowerupWithPaddle() {
@@ -586,7 +587,7 @@ function pauseGame() {
 }
 
 /*
- * START THE CRAP
+ * START THE GAME
  */
 canvas.addEventListener("touchstart", touchStartHandler, false);
 canvas.addEventListener("touchmove", touchMoveHandler, false);
@@ -596,7 +597,6 @@ document.addEventListener("keydown", keyDownHandler, false);
 document.addEventListener("keyup", keyUpHandler, false);
 startGame();
 draw()
-// dedicated to strong bad apparently
 
 
 function drawMuffin(ctx) {
