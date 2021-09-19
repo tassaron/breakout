@@ -28,10 +28,6 @@ sprites.addEventListener("load", function(){
 })
 sprites.src = "powerups.png";
 
-let draw_sprite = {
-    player: function() {console.log("h"); ctx.drawImage(sprites, 72, 0, 16, 39, 0, 0, 16, 39)}
-};
-
 // Timer for pausing the ball during countdowns
 // and giving invincibility frames after a death
 timer = {
