@@ -79,6 +79,7 @@ function ball(i, x = canvas.width / 2, y = canvas.height - 64) {
             timer.dying--;
             if (timer.dying == 0) {
                 if (lives < 0) {
+                    show_send_score_button();
                     gameOver = true;
                 } else {
                     resetBall();
@@ -357,7 +358,7 @@ function touchStartHandler(e) {
 
 function touchMoveHandler(e) {
     // get relative (to canvas) x coord of touch
-    touch = e.changedTouches[0];
+    let touch = e.changedTouches[0];
     let mouseX = touch.pageX - canvas.offsetLeft;
     if (mouseX > 0 && mouseX < canvas.width) {
         let oldPaddleX = paddle.x;
@@ -935,4 +936,23 @@ function drawMuffin(ctx) {
     ctx.restore();
     ctx.restore();
     ctx.moveTo(80000, 80000);
+}
+
+function show_send_score_button() {
+    // If embedded on Rainey Arcade, integrate with the send_score_button
+    const send_score_button = document.getElementById("send_score_button");
+    if (send_score_button) {
+        function sendScore(e) {
+            send_score(
+                document.getElementById("game_title").dataset.filename,
+                score,
+                send_score_button.dataset.csrfToken,
+            );
+            e.currentTarget.setAttribute("style", "display: none;");
+            e.currentTarget.removeEventListener("click", sendScore);
+            e.stopPropagation();
+        }
+        send_score_button.setAttribute("style", "z-index: 100; display: block; left: 50%; top: 50%; transform: translate(-50%);");
+        send_score_button.addEventListener("click", sendScore);
+    }
 }
