@@ -18,6 +18,9 @@ let gamePaused = false;
 let bricks = [];
 let balls = [];
 
+let pause_button = document.getElementById("pause_button");
+pause_button.addEventListener("click", pauseGame, false);
+
 // Load sprites, then start the game
 let sprites = new Image();
 sprites.addEventListener("load", function () {
@@ -224,7 +227,7 @@ let paddle = {
     height: 16,
     width: 96,
     speed: 8,
-    x: (canvas.width - this.width) / 2,
+    x: (canvas.width - 96) / 2,
     dir: 0,
 };
 
@@ -368,9 +371,26 @@ function touchMoveHandler(e) {
     e.preventDefault();
 }
 
+document.getScroll = function () {
+    // https://stackoverflow.com/revisions/2481776/3
+    if (window.scrollY != undefined) {
+        return [scrollX, scrollY];
+    } else {
+        let sx,
+            sy,
+            d = document,
+            r = d.documentElement,
+            b = d.body;
+        sx = r.scrollLeft || b.scrollLeft || 0;
+        sy = r.scrollTop || b.scrollTop || 0;
+        return [sx, sy];
+    }
+};
+
 function mouseMoveHandler(e) {
-    // get relative (to canvas) x coord of mouse
-    let mouseX = e.clientX - canvas.offsetLeft;
+    // Get relative (to canvas and scroll position) coords of mouse
+    let scroll_position = document.getScroll();
+    let mouseX = e.clientX - gamediv.offsetLeft + scroll_position[0];
     if (mouseX > 0 && mouseX < canvas.width) {
         let oldPaddleX = paddle.x;
         paddle.x = mouseX - paddle.width / 2;
@@ -516,7 +536,7 @@ function drawPauseScreen() {
 }
 
 function drawCountdown() {
-    num = Math.floor(timer.ballPause / 30) + 1;
+    let num = Math.floor(timer.ballPause / 30) + 1;
     ctx.font = "36pt Verdana";
     ctx.fillStyle = purple;
     ctx.fillText(num, canvas.width / 2 - 4, canvas.height / 2 + 8);
