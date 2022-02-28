@@ -1,6 +1,10 @@
 // A dirt simple breakout game expanded from this tutorial:
 // https://developer.mozilla.org/en-US/docs/Games/Tutorials/2D_Breakout_game_pure_JavaScript/
 // Made by Brianna Rainey <https://rainey.tech>
+
+// get "Send Score" fuctionality from the Rainey Arcade parent repo
+import { send_score, hide_send_score_button } from "../send_score.js";
+
 const gamediv = document.getElementById("game");
 const canvas = document.createElement("canvas");
 gamediv.appendChild(canvas);
